@@ -289,20 +289,33 @@ func handleSerialChannel(d *webrtc.DataChannel) {
 		Uint16("data_channel_id", *d.ID()).Logger()
 
 	d.OnOpen(func() {
+		// 串口不可用时，直接提示并关闭通道，避免后续读写
+		if port == nil {
+			scopedLogger.Warn().Msg("Serial port not available, closing serial data channel")
+			_ = d.SendText("serial disabled")
+			d.Close()
+			return
+		}
+		// 抓取串口快照，避免全局变量在其他协程中变化导致竞态
+		p := port
 		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					scopedLogger.Warn().Interface("recover", r).Msg("Recovered from serial reader panic")
+				}
+			}()
 			buf := make([]byte, 1024)
 			for {
-				n, err := port.Read(buf)
+				n, err := p.Read(buf)
 				if err != nil {
 					if err != io.EOF {
 						scopedLogger.Warn().Err(err).Msg("Failed to read from serial port")
 					}
-					break
+					return
 				}
-				err = d.Send(buf[:n])
-				if err != nil {
+				if err := d.Send(buf[:n]); err != nil {
 					scopedLogger.Warn().Err(err).Msg("Failed to send serial output")
-					break
+					return
 				}
 			}
 		}()
