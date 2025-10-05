@@ -1,6 +1,6 @@
 //go:build !amd64
 
-package ptitle
+package utils
 
 import "github.com/erikdubbelboer/gspt"
 

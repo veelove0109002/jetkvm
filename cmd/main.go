@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/jetkvm/kvm"
-	"github.com/jetkvm/kvm/internal/utils/ptitle"
+	"github.com/jetkvm/kvm/internal/utils"
 )
 
 const (
@@ -23,7 +23,7 @@ const (
 )
 
 func program() {
-	ptitle.SetProcTitle(os.Args[0] + " [app]")
+	utils.SetProcTitle(os.Args[0] + " [app]")
 	kvm.Main()
 }
 
@@ -102,7 +102,7 @@ func supervise() error {
 		_ = cmd.Process.Signal(sig)
 	}()
 
-	ptitle.SetProcTitle(os.Args[0] + " [sup]")
+	utils.SetProcTitle(os.Args[0] + " [sup]")
 
 	cmdErr := cmd.Wait()
 	if cmdErr == nil {
