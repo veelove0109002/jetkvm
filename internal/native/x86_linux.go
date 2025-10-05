@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog"
 )
 
 /*
@@ -181,8 +183,6 @@ func videoStart() {
 
 		var buf bytes.Buffer
 		startCode := []byte{0x00, 0x00, 0x00, 0x01}
-		// access unit delimiter NAL type=9
-		isAUD := func(nalHeader byte) bool { return nalHeader&0x1F == 9 }
 		// 估算 duration
 		frameDuration := time.Second / time.Duration(max(1, targetFPS))
 
