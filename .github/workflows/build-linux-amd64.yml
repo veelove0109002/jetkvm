@@ -1,0 +1,62 @@
+name: Build Linux amd64
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "发布版本号（例如 0.4.9）"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-amd64:
+    runs-on: ubuntu-latest
+
+    env:
+      # 如希望跳过前端构建，设为 1
+      SKIP_UI_BUILD: 0
+      VERSION_INPUT: ${{ inputs.version }}
+      TAG_NAME: v${{ inputs.version }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+          cache: true
+
+      - name: Setup Node (for frontend build)
+        if: env.SKIP_UI_BUILD != '1'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: "npm"
+          cache-dependency-path: "ui/package-lock.json"
+
+      - name: Build frontend
+        if: env.SKIP_UI_BUILD != '1'
+        working-directory: ui
+        run: |
+          npm ci
+          npm run build:device
+
+      - name: Build app (linux/amd64)
+        run: |
+          make build_release_amd64
+
+      - name: Create GitHub Release and upload asset
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ env.TAG_NAME }}
+          name: ${{ env.TAG_NAME }}
+          draft: false
+          prerelease: false
+          generateReleaseNotes: true
+          artifacts: "bin/jetkvm_app"
+          artifactErrorsFailBuild: true

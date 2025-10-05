@@ -128,3 +128,18 @@ release:
 	@shasum -a 256 bin/jetkvm_app | cut -d ' ' -f 1 > bin/jetkvm_app.sha256
 	rclone copyto bin/jetkvm_app r2://jetkvm-update/app/$(VERSION)/jetkvm_app
 	rclone copyto bin/jetkvm_app.sha256 r2://jetkvm-update/app/$(VERSION)/jetkvm_app.sha256
+
+# x86_64 Linux build (no ARM native libs). Uses new x86 backend.
+build_dev_amd64:
+	@echo "Building (amd64)..."
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build \
+		-ldflags="$(GO_LDFLAGS) -X $(KVM_PKG_NAME).builtAppVersion=$(VERSION_DEV)" \
+		$(GO_RELEASE_BUILD_ARGS) \
+		-o $(BIN_DIR)/jetkvm_app -v cmd/main.go
+
+build_release_amd64:
+	@echo "Building release (amd64)..."
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build \
+		-ldflags="$(GO_LDFLAGS) -X $(KVM_PKG_NAME).builtAppVersion=$(VERSION)" \
+		$(GO_RELEASE_BUILD_ARGS) \
+		-o bin/jetkvm_app cmd/main.go
