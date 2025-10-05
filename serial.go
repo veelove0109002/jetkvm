@@ -16,9 +16,12 @@ const serialPortPath = "/dev/ttyS3"
 var port serial.Port
 
 func mountATXControl() error {
+	if port == nil {
+		serialLogger.Warn().Msg("Serial port not available, skip ATX control")
+		return fmt.Errorf("serial port not available")
+	}
 	_ = port.SetMode(defaultMode)
 	go runATXControl()
-
 	return nil
 }
 
@@ -127,6 +130,10 @@ func pressATXResetButton(duration time.Duration) error {
 }
 
 func mountDCControl() error {
+	if port == nil {
+		serialLogger.Warn().Msg("Serial port not available, skip DC control")
+		return fmt.Errorf("serial port not available")
+	}
 	_ = port.SetMode(defaultMode)
 	registerDCMetrics()
 	go runDCControl()
@@ -260,6 +267,10 @@ var defaultMode = &serial.Mode{
 
 func initSerialPort() {
 	_ = reopenSerialPort()
+	if port == nil {
+		serialLogger.Warn().Msg("Serial port unavailable, disabling serial features")
+		return
+	}
 	switch config.ActiveExtension {
 	case "atx-power":
 		_ = mountATXControl()
