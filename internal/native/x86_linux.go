@@ -38,6 +38,12 @@ var (
 	currentState    = VideoState{Ready: false}
 )
 
+// 硬件加速相关配置
+var (
+	hwAccelMode = "auto"                     // auto|vaapi|qsv|none
+	vaapiDevice = "/dev/dri/renderD128"      // 可通过 VIDEO_VAAPI_DEVICE 覆盖
+)
+
 type ioReadCloser interface {
 	Read(p []byte) (n int, err error)
 	Close() error
@@ -90,8 +96,19 @@ func videoInit() error {
 	if br := strings.TrimSpace(os.Getenv("VIDEO_BITRATE")); br != "" {
 		targetBitrate = br
 	}
+	// 硬件加速环境变量
+	if accel := strings.TrimSpace(os.Getenv("VIDEO_HWACCEL")); accel != "" {
+		// 允许 auto|vaapi|qsv|none
+		accelLower := strings.ToLower(accel)
+		if accelLower == "auto" || accelLower == "vaapi" || accelLower == "qsv" || accelLower == "none" {
+			hwAccelMode = accelLower
+		}
+	}
+	if dev := strings.TrimSpace(os.Getenv("VIDEO_VAAPI_DEVICE")); dev != "" {
+		vaapiDevice = dev
+	}
 
-	// 简单检查设备存在
+	// 简单检查视频采集设备存在
 	if _, err := os.Stat(videoDevice); err != nil {
 		return fmt.Errorf("video device not found: %s", videoDevice)
 	}
@@ -105,7 +122,76 @@ func videoShutdown() {
 }
 
 func buildFFmpegArgs() []string {
-	// MJPG 输入，低延迟 x264 输出，Annex B bytestream 到 stdout
+	// 根据硬件能力选择 VAAPI/QSV/CPU。输入为 V4L2 MJPEG，输出 H.264 Annex B bytestream 到 stdout。
+	// 优先 VAAPI（多数核显可用），其次 QSV（Intel），否则回退 CPU。
+	// 低延迟：关闭 B 帧，保持小缓冲。
+	// 注意：QSV 需显式选择输入解码器 mjpeg_qsv，VAAPI 用 hwupload 将软件解码帧上传到 GPU。
+
+	// 判定是否能用 VAAPI（auto 模式下优先）
+	canVAAPI := false
+	if hwAccelMode == "vaapi" || hwAccelMode == "auto" {
+		if _, err := os.Stat(vaapiDevice); err == nil {
+			canVAAPI = true
+		}
+	}
+
+	// QSV 通常也依赖 /dev/dri/renderD128（Intel），这里用存在性作为粗略判定
+	canQSV := false
+	if hwAccelMode == "qsv" || (hwAccelMode == "auto" && !canVAAPI) {
+		if _, err := os.Stat("/dev/dri/renderD128"); err == nil {
+			canQSV = true
+		}
+	}
+
+	if canVAAPI && hwAccelMode != "none" {
+		return []string{
+			"-hide_banner",
+			"-loglevel", "warning",
+			"-fflags", "nobuffer",
+			"-flags", "low_delay",
+			// 输入：V4L2 MJPEG
+			"-f", "v4l2",
+			"-input_format", "mjpeg",
+			"-i", videoDevice,
+			"-an",
+			// VAAPI：将帧上传到 GPU，编码 h264_vaapi
+			"-hwaccel", "vaapi",
+			"-vaapi_device", vaapiDevice,
+			"-vf", "format=nv12,hwupload",
+			"-c:v", "h264_vaapi",
+			"-bf", "0",
+			"-pix_fmt", "nv12",
+			"-r", strconv.Itoa(targetFPS),
+			"-b:v", targetBitrate,
+			"-f", "h264",
+			"pipe:1",
+		}
+	}
+
+	if canQSV && hwAccelMode != "none" {
+		return []string{
+			"-hide_banner",
+			"-loglevel", "warning",
+			"-fflags", "nobuffer",
+			"-flags", "low_delay",
+			// 指定输入解码器为 mjpeg_qsv（必须在 -i 之前）
+			"-c:v", "mjpeg_qsv",
+			"-f", "v4l2",
+			"-input_format", "mjpeg",
+			"-i", videoDevice,
+			"-an",
+			// 输出编码 h264_qsv
+			"-c:v", "h264_qsv",
+			"-look_ahead", "0",
+			"-bf", "0",
+			"-r", strconv.Itoa(targetFPS),
+			"-b:v", targetBitrate,
+			"-f", "h264",
+			"pipe:1",
+		}
+	}
+
+	// 回退：CPU libx264（原始实现）
 	return []string{
 		"-hide_banner",
 		"-loglevel", "warning",
