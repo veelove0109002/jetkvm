@@ -2,6 +2,7 @@ package kvm
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"strconv"
 	"strings"
