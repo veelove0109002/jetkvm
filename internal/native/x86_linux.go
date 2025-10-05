@@ -175,7 +175,11 @@ func videoStart() {
 	readerWG.Add(1)
 	go func() {
 		defer readerWG.Done()
+		// 防御：避免读协程 panic 导致进程退出
 		defer func() {
+			if r := recover(); r != nil {
+				logChan <- nativeLogMessage{Level: zerolog.WarnLevel, Message: fmt.Sprintf("video reader recovered: %v", r)}
+			}
 			if ffmpegStdout != nil {
 				_ = ffmpegStdout.Close()
 			}
@@ -201,19 +205,27 @@ func videoStart() {
 					// 从起始到 AUD 前为一帧（跳过首个 AUD头）
 					frame := data[:idx]
 					if len(frame) > 0 {
-						videoFrameChan <- append([]byte{}, frame...)
+						if videoFrameChan != nil {
+							videoFrameChan <- append([]byte{}, frame...)
+						}
 					}
 					// 丢弃已消费
 					buf.Next(idx)
 				}
 				// 如果没有 AUD，则可按时间推送整体（退化处理）
 				if buf.Len() > 256*1024 {
-					videoFrameChan <- buf.Next(buf.Len())
+					if videoFrameChan != nil {
+						videoFrameChan <- buf.Next(buf.Len())
+					} else {
+						_ = buf.Next(buf.Len())
+					}
 				}
 				// 发送状态（低频）
 				currentState.Ready = true
 				currentState.FramePerSecond = float64(targetFPS)
-				videoStateChan <- currentState
+				if videoStateChan != nil {
+					videoStateChan <- currentState
+				}
 				time.Sleep(frameDuration)
 			}
 			if err != nil {
@@ -224,7 +236,9 @@ func videoStart() {
 
 	currentState.Ready = true
 	currentState.Error = ""
-	videoStateChan <- currentState
+	if videoStateChan != nil {
+		videoStateChan <- currentState
+	}
 }
 
 func indexAUD(b []byte, sc []byte) int {
@@ -266,7 +280,9 @@ func videoStop() {
 	ffmpegStdout = nil
 
 	currentState.Ready = false
-	videoStateChan <- currentState
+	if videoStateChan != nil {
+		videoStateChan <- currentState
+	}
 }
 
 func videoLogStatus() string {
