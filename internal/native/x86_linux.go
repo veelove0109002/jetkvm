@@ -149,18 +149,18 @@ func buildFFmpegArgs() []string {
 			"-loglevel", "warning",
 			"-fflags", "nobuffer",
 			"-flags", "low_delay",
+			// 输入侧硬件加速需放在 -i 之前
+			"-hwaccel", "vaapi",
+			"-vaapi_device", vaapiDevice,
 			// 输入：V4L2 MJPEG
 			"-f", "v4l2",
 			"-input_format", "mjpeg",
 			"-i", videoDevice,
 			"-an",
 			// VAAPI：将帧上传到 GPU，编码 h264_vaapi
-			"-hwaccel", "vaapi",
-			"-vaapi_device", vaapiDevice,
 			"-vf", "format=nv12,hwupload",
 			"-c:v", "h264_vaapi",
 			"-bf", "0",
-			"-pix_fmt", "nv12",
 			"-r", strconv.Itoa(targetFPS),
 			"-b:v", targetBitrate,
 			"-f", "h264",
@@ -174,8 +174,9 @@ func buildFFmpegArgs() []string {
 			"-loglevel", "warning",
 			"-fflags", "nobuffer",
 			"-flags", "low_delay",
-			// 指定输入解码器为 mjpeg_qsv（必须在 -i 之前）
-			"-c:v", "mjpeg_qsv",
+			// 输入侧硬件加速需放在 -i 之前
+			"-hwaccel", "qsv",
+			// 输入：V4L2 MJPEG
 			"-f", "v4l2",
 			"-input_format", "mjpeg",
 			"-i", videoDevice,
