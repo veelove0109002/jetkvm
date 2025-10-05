@@ -1,3 +1,6 @@
+# Only include NBD server when NBD is enabled
+//go:build !nonbd
+
 package kvm
 
 import (

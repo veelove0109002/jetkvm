@@ -232,9 +232,15 @@ func getInitialVirtualMediaState() (*VirtualMediaState, error) {
 	case "":
 		return nil, nil
 	case "/dev/nbd0":
-		initialState.Source = HTTP
-		initialState.URL = "/"
-		initialState.Size = 1
+		// 仅在启用 NBD 时识别为远程 HTTP 挂载占位
+		if !nbdDisabled {
+			initialState.Source = HTTP
+			initialState.URL = "/"
+			initialState.Size = 1
+		} else {
+			// nonbd 下不识别 nbd 设备，视为未挂载
+			return nil, nil
+		}
 	default:
 		initialState.Filename = filepath.Base(diskPath)
 		// get size from file
@@ -263,6 +269,10 @@ func setInitialVirtualMediaState() error {
 }
 
 func rpcMountWithHTTP(url string, mode VirtualMediaMode) error {
+	// 在 nonbd 构建下禁用通过 HTTP/NBD 挂载
+	if nbdDisabled {
+		return fmt.Errorf("NBD/HTTP 挂载已在此构建禁用（nonbd）")
+	}
 	virtualMediaStateMutex.Lock()
 	if currentVirtualMediaState != nil {
 		virtualMediaStateMutex.Unlock()

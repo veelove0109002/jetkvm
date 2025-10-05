@@ -134,12 +134,12 @@ build_dev_amd64:
 	@echo "Building (amd64)..."
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build \
 		-ldflags="$(GO_LDFLAGS) -X $(KVM_PKG_NAME).builtAppVersion=$(VERSION_DEV)" \
-		$(GO_RELEASE_BUILD_ARGS) \
+		$(GO_RELEASE_BUILD_ARGS) -tags nonbd \
 		-o $(BIN_DIR)/jetkvm_app -v cmd/main.go
 
 build_release_amd64:
 	@echo "Building release (amd64)..."
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build \
 		-ldflags="$(GO_LDFLAGS) -X $(KVM_PKG_NAME).builtAppVersion=$(VERSION)" \
-		$(GO_RELEASE_BUILD_ARGS) \
+		$(GO_RELEASE_BUILD_ARGS) -tags nonbd \
 		-o bin/jetkvm_app cmd/main.go

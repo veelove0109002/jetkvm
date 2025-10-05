@@ -1,4 +1,5 @@
-//go:build linux
+# Only include NBD client for Linux when NBD is enabled
+//go:build linux && !nonbd
 
 package kvm
 
