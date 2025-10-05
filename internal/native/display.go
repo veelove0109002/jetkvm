@@ -6,8 +6,15 @@ import (
 )
 
 func (n *Native) setUIVars() {
-	uiSetVar("app_version", n.appVersion.String())
-	uiSetVar("system_version", n.systemVersion.String())
+	var appVer, sysVer string
+	if n.appVersion != nil {
+		appVer = n.appVersion.String()
+	}
+	if n.systemVersion != nil {
+		sysVer = n.systemVersion.String()
+	}
+	uiSetVar("app_version", appVer)
+	uiSetVar("system_version", sysVer)
 }
 
 func (n *Native) initUI() {
