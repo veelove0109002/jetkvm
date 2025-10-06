@@ -182,19 +182,7 @@ func (u *UInputBackend) updateKeysDown(modifier byte, keys []byte) usbgadget.Key
 // 公开方法以满足接口
 func (u *UInputBackend) UpdateKeysDown(modifier byte, keys []byte) usbgadget.KeysDownState {
 	return u.updateKeysDown(modifier, keys)
-}
-	// 复制并规范长度
-	k := make([]byte, 6)
-	copy(k, keys)
-	state := usbgadget.KeysDownState{Modifier: modifier, Keys: k}
-	u.keyboardStateLock.Lock()
-	u.keysDownState = state
-	u.keyboardStateLock.Unlock()
-	if u.onKeysDownChange != nil {
-		(*u.onKeysDownChange)(state)
-	}
-	return state
-}
+
 
 func (u *UInputBackend) resetUserInputTime() {
 	u.lastUserInput = time.Now()
