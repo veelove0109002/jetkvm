@@ -33,12 +33,14 @@ type inputBackend interface {
 	GetLastUserInputTime() time.Time
 
 	// gadget-specific operations (no-op in uinput)
-	IsUDCBound() bool
+	IsUDCBound() (bool, error)
 	BindUDC() error
 	UnbindUDC() error
-	SetGadgetConfig(cfg usbgadget.Config) error
-	UpdateGadgetConfig(cfg usbgadget.Config) error
-	SetGadgetDevices(dev usbgadget.Devices) error
+	GetPath() string
+	SetGadgetConfig(cfg *usbgadget.Config) error
+	OverrideGadgetConfig(cfg usbgadget.Config) error
+	UpdateGadgetConfig() error
+	SetGadgetDevices(dev *usbgadget.Devices) error
 }
 
 var gadget inputBackend
