@@ -26,7 +26,7 @@ type inputBackend interface {
 
 var gadget inputBackend
 
-# detectUsbDeviceMode returns true if UDC exists and is usable (rough check)
+ // detectUsbDeviceMode returns true if UDC exists and is usable (rough check)
 func detectUsbDeviceMode() bool {
 	if _, err := os.Stat("/sys/class/udc"); err != nil {
 		return false
