@@ -182,6 +182,7 @@ func (u *UInputBackend) updateKeysDown(modifier byte, keys []byte) usbgadget.Key
 // 公开方法以满足接口
 func (u *UInputBackend) UpdateKeysDown(modifier byte, keys []byte) usbgadget.KeysDownState {
 	return u.updateKeysDown(modifier, keys)
+}
 
 
 func (u *UInputBackend) resetUserInputTime() {
