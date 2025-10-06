@@ -16,12 +16,29 @@ type inputBackend interface {
 	AbsMouseReport(x int, y int, buttons uint8) error
 	RelMouseReport(dx int8, dy int8, buttons uint8) error
 	AbsMouseWheelReport(wheelY int8) error
+
+	// keyboard state
 	GetKeyboardState() usbgadget.KeyboardState
 	GetKeysDownState() usbgadget.KeysDownState
+	UpdateKeysDown(modifier byte, keys []byte) usbgadget.KeysDownState
+	DelayAutoReleaseWithDuration(resetDuration time.Duration)
+
+	// callbacks
 	SetOnKeyboardStateChange(func(state usbgadget.KeyboardState))
 	SetOnKeysDownChange(func(state usbgadget.KeysDownState))
 	SetOnKeepAliveReset(func())
+
+	// misc
 	GetUsbState() string
+	GetLastUserInputTime() time.Time
+
+	// gadget-specific operations (no-op in uinput)
+	IsUDCBound() bool
+	BindUDC() error
+	UnbindUDC() error
+	SetGadgetConfig(cfg usbgadget.Config) error
+	UpdateGadgetConfig(cfg usbgadget.Config) error
+	SetGadgetDevices(dev usbgadget.Devices) error
 }
 
 var gadget inputBackend

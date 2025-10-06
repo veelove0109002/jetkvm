@@ -13,8 +13,8 @@ import (
 )
 
 type UInputBackend struct {
-	fd                 *os.File
-	log                *zerolog.Logger
+	fd                    *os.File
+	log                   *zerolog.Logger
 	onKeyboardStateChange *func(state usbgadget.KeyboardState)
 	onKeysDownChange      *func(state usbgadget.KeysDownState)
 	onKeepAliveReset      *func()
@@ -179,8 +179,29 @@ func (u *UInputBackend) updateKeysDown(modifier byte, keys []byte) usbgadget.Key
 	return state
 }
 
+// 公开方法以满足接口
+func (u *UInputBackend) UpdateKeysDown(modifier byte, keys []byte) usbgadget.KeysDownState {
+	return u.updateKeysDown(modifier, keys)
+}
+	// 复制并规范长度
+	k := make([]byte, 6)
+	copy(k, keys)
+	state := usbgadget.KeysDownState{Modifier: modifier, Keys: k}
+	u.keyboardStateLock.Lock()
+	u.keysDownState = state
+	u.keyboardStateLock.Unlock()
+	if u.onKeysDownChange != nil {
+		(*u.onKeysDownChange)(state)
+	}
+	return state
+}
+
 func (u *UInputBackend) resetUserInputTime() {
 	u.lastUserInput = time.Now()
+}
+
+func (u *UInputBackend) GetLastUserInputTime() time.Time {
+	return u.lastUserInput
 }
 
 // KeyboardReport：按 HID 语义注入键盘状态（modifier+keys）为一帧
@@ -228,6 +249,7 @@ func hidMaskFor(hid byte) byte {
 
 // KeypressReport：按单键 press/release 注入（更贴近 usbgadget 的行为）
 func (u *UInputBackend) KeypressReport(key byte, press bool) error {
+	// uinput 模式下不使用自动释放，DelayAutoReleaseWithDuration 为 no-op
 	// 修饰键
 	if code, ok := hidModifierToLinux[key]; ok {
 		if press {
@@ -290,7 +312,19 @@ func (u *UInputBackend) KeypressReport(key byte, press bool) error {
 	return nil
 }
 
+func (u *UInputBackend) DelayAutoReleaseWithDuration(resetDuration time.Duration) {
+	// no-op in uinput
+}
+
 // 鼠标在 uinput 下暂不实现，保留空实现以兼容编译与调用
 func (u *UInputBackend) AbsMouseReport(x int, y int, buttons uint8) error { return nil }
 func (u *UInputBackend) RelMouseReport(dx int8, dy int8, buttons uint8) error { return nil }
 func (u *UInputBackend) AbsMouseWheelReport(wheelY int8) error { return nil }
+
+// gadget 相关操作在 uinput 下无意义，均返回 no-op
+func (u *UInputBackend) IsUDCBound() bool { return false }
+func (u *UInputBackend) BindUDC() error { return nil }
+func (u *UInputBackend) UnbindUDC() error { return nil }
+func (u *UInputBackend) SetGadgetConfig(cfg usbgadget.Config) error { return nil }
+func (u *UInputBackend) UpdateGadgetConfig(cfg usbgadget.Config) error { return nil }
+func (u *UInputBackend) SetGadgetDevices(dev usbgadget.Devices) error { return nil }
