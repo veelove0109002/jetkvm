@@ -37,7 +37,7 @@ type inputBackend interface {
 	BindUDC() error
 	UnbindUDC() error
 	GetPath(subpath string) (string, error)
-	SetGadgetConfig(cfg *usbgadget.Config) error
+	SetGadgetConfig(cfg *usbgadget.Config)
 	OverrideGadgetConfig(manufacturer, product, serial string) (error, bool)
 	UpdateGadgetConfig() error
 	SetGadgetDevices(dev *usbgadget.Devices) error

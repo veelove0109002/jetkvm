@@ -316,7 +316,7 @@ func (u *UInputBackend) AbsMouseWheelReport(wheelY int8) error { return nil }
 func (u *UInputBackend) IsUDCBound() (bool, error) { return false, nil }
 func (u *UInputBackend) BindUDC() error { return nil }
 func (u *UInputBackend) UnbindUDC() error { return nil }
-func (u *UInputBackend) SetGadgetConfig(cfg *usbgadget.Config) error { return nil }
+func (u *UInputBackend) SetGadgetConfig(cfg *usbgadget.Config) {}
 func (u *UInputBackend) OverrideGadgetConfig(manufacturer, product, serial string) (error, bool) { return nil, false }
 func (u *UInputBackend) UpdateGadgetConfig() error { return nil }
 func (u *UInputBackend) SetGadgetDevices(dev *usbgadget.Devices) error { return nil }
