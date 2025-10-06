@@ -47,10 +47,22 @@ var gadget inputBackend
 
  // detectUsbDeviceMode returns true if UDC exists and is usable (rough check)
 func detectUsbDeviceMode() bool {
-	if _, err := os.Stat("/sys/class/udc"); err != nil {
+	// 环境变量强制选择后端
+	switch os.Getenv("USB_BACKEND") {
+	case "uinput":
+		return false
+	case "gadget":
+		return true
+	}
+
+	// 必须存在且包含至少一个 UDC 条目才视为可用
+	entries, err := os.ReadDir("/sys/class/udc")
+	if err != nil {
 		return false
 	}
-	// 粗略检测：目录存在即认为可能可用，细化可读具体 UDC 条目
+	if len(entries) == 0 {
+		return false
+	}
 	return true
 }
 
