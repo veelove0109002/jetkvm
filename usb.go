@@ -40,7 +40,7 @@ type inputBackend interface {
 	SetGadgetConfig(cfg *usbgadget.Config)
 	OverrideGadgetConfig(manufacturer, product, serial string) (error, bool)
 	UpdateGadgetConfig() error
-	SetGadgetDevices(dev *usbgadget.Devices) error
+	SetGadgetDevices(dev *usbgadget.Devices)
 }
 
 var gadget inputBackend
