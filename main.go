@@ -63,10 +63,13 @@ func Main() {
 
 	initPrometheus()
 
-	// initialize usb gadget
+	// initialize input backend (usb gadget or uinput)
 	initUsbGadget()
-	if err := setInitialVirtualMediaState(); err != nil {
-		logger.Warn().Err(err).Msg("failed to set initial virtual media state")
+	// 仅在 USB Gadget 可用时设置虚拟光驱初始状态，避免在 uinput 或初始化失败时崩溃
+	if gadget != nil && detectUsbDeviceMode() {
+		if err := setInitialVirtualMediaState(); err != nil {
+			logger.Warn().Err(err).Msg("failed to set initial virtual media state")
+		}
 	}
 
 	if err := initImagesFolder(); err != nil {

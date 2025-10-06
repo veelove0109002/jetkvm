@@ -30,10 +30,10 @@ var defaultLogger = zerolog.New(os.Stdout).With().Str("subsystem", "uinput").Log
 
 // evdev/uinput 常量
 const (
-	UI_DEV_CREATE = 0x5501
-	UI_DEV_DESTROY= 0x5502
-	UI_SET_EVBIT  = 0x40045564
-	UI_SET_KEYBIT = 0x40045565
+	UI_DEV_CREATE  = 0x5501
+	UI_DEV_DESTROY = 0x5502
+	UI_SET_EVBIT   = 0x40045564
+	UI_SET_KEYBIT  = 0x40045565
 
 	EV_SYN = 0x00
 	EV_KEY = 0x01
@@ -46,6 +46,24 @@ type input_event struct {
 	Type  uint16
 	Code  uint16
 	Value int32
+}
+
+type input_id struct {
+	Bustype uint16
+	Vendor  uint16
+	Product uint16
+	Version uint16
+}
+
+// 与内核头 uinput_user_dev 对齐的最小结构（只填 name 和 id）
+type uinput_user_dev struct {
+	Name            [80]byte
+	Id              input_id
+	FFEffectsMax    uint32
+	Absmax          [64]uint32
+	Absmin          [64]uint32
+	Absfuzz         [64]uint32
+	Absflat         [64]uint32
 }
 
 // NewUInputBackend 创建并注册一个虚拟键盘设备
@@ -67,7 +85,10 @@ func NewUInputBackend(logger *zerolog.Logger) (*UInputBackend, error) {
 	}
 	u.fd = f
 
-	// 使能 EV_KEY
+	// 使能 EV_SYN 与 EV_KEY
+	if err := u.ioctl(UI_SET_EVBIT, EV_SYN); err != nil {
+		return nil, fmt.Errorf("ioctl UI_SET_EVBIT EV_SYN failed: %w", err)
+	}
 	if err := u.ioctl(UI_SET_EVBIT, EV_KEY); err != nil {
 		return nil, fmt.Errorf("ioctl UI_SET_EVBIT EV_KEY failed: %w", err)
 	}
@@ -79,7 +100,21 @@ func NewUInputBackend(logger *zerolog.Logger) (*UInputBackend, error) {
 		_ = u.ioctl(UI_SET_KEYBIT, uint64(code))
 	}
 
-	// 创建设备（最简，不设置名称/厂商）
+	// 写入设备基本信息（名称与 input_id），符合 uinput 要求
+	var dev uinput_user_dev
+	name := []byte("jetkvm-uinput")
+	copy(dev.Name[:], name)
+	dev.Id = input_id{
+		Bustype: 0x03,        // BUS_USB
+		Vendor:  0x1209,      // 示例 VID（可按需调整）
+		Product: 0x0001,      // 示例 PID（可按需调整）
+		Version: 0x0001,
+	}
+	if err := binary.Write(u.fd, binary.LittleEndian, &dev); err != nil {
+		return nil, fmt.Errorf("write uinput_user_dev failed: %w", err)
+	}
+
+	// 创建设备
 	if err := u.ioctl(UI_DEV_CREATE, 0); err != nil {
 		return nil, fmt.Errorf("ioctl UI_DEV_CREATE failed: %w", err)
 	}
