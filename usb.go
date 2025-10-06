@@ -1,23 +1,69 @@
 package kvm
 
 import (
+	"os"
 	"sync"
 	"time"
 
 	"github.com/jetkvm/kvm/internal/usbgadget"
+	"github.com/jetkvm/kvm/internal/uinput"
 )
 
-var gadget *usbgadget.UsbGadget
+type inputBackend interface {
+	OpenKeyboardHidFile() error
+	KeyboardReport(modifier byte, keys []byte) error
+	KeypressReport(key byte, press bool) error
+	AbsMouseReport(x int, y int, buttons uint8) error
+	RelMouseReport(dx int8, dy int8, buttons uint8) error
+	AbsMouseWheelReport(wheelY int8) error
+	GetKeyboardState() usbgadget.KeyboardState
+	GetKeysDownState() usbgadget.KeysDownState
+	SetOnKeyboardStateChange(func(state usbgadget.KeyboardState))
+	SetOnKeysDownChange(func(state usbgadget.KeysDownState))
+	SetOnKeepAliveReset(func())
+	GetUsbState() string
+}
 
-// initUsbGadget initializes the USB gadget.
-// call it only after the config is loaded.
+var gadget inputBackend
+
+# detectUsbDeviceMode returns true if UDC exists and is usable (rough check)
+func detectUsbDeviceMode() bool {
+	if _, err := os.Stat("/sys/class/udc"); err != nil {
+		return false
+	}
+	// 粗略检测：目录存在即认为可能可用，细化可读具体 UDC 条目
+	return true
+}
+
+// initUsbGadget initializes input backend: prefer USB gadget if device mode present; else fallback to uinput.
 func initUsbGadget() {
-	gadget = usbgadget.NewUsbGadget(
-		"jetkvm",
-		config.UsbDevices,
-		config.UsbConfig,
-		usbLogger,
-	)
+	if detectUsbDeviceMode() {
+		usbLogger.Info().Msg("USB Device Mode detected, initializing USB gadget backend")
+		gadget = usbgadget.NewUsbGadget(
+			"jetkvm",
+			config.UsbDevices,
+			config.UsbConfig,
+			usbLogger,
+		)
+		if gadget == nil {
+			usbLogger.Warn().Msg("USB gadget init failed, falling back to uinput backend")
+		}
+	}
+
+	if gadget == nil {
+		usbLogger.Info().Msg("Initializing uinput backend")
+		u, err := uinput.NewUInputBackend(usbLogger)
+		if err != nil {
+			usbLogger.Error().Err(err).Msg("failed to init uinput backend")
+		} else {
+			gadget = u
+		}
+	}
+
+	if gadget == nil {
+		usbLogger.Error().Msg("no input backend available")
+		return
+	}
 
 	go func() {
 		for {
@@ -46,7 +92,7 @@ func initUsbGadget() {
 
 	// open the keyboard hid file to listen for keyboard events
 	if err := gadget.OpenKeyboardHidFile(); err != nil {
-		usbLogger.Error().Err(err).Msg("failed to open keyboard hid file")
+		usbLogger.Warn().Err(err).Msg("keyboard hid file open skipped or failed (backend-specific)")
 	}
 }
 
