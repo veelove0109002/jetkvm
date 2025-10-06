@@ -1,12 +1,12 @@
 package uinput
 
 import (
+	"encoding/binary"
 	"fmt"
 	"os"
 	"sync"
 	"syscall"
 	"time"
-	"unsafe"
 
 	"github.com/jetkvm/kvm/internal/usbgadget"
 	"github.com/rs/zerolog"
@@ -61,7 +61,7 @@ func NewUInputBackend(logger *zerolog.Logger) (*UInputBackend, error) {
 		lastUserInput:  time.Now(),
 	}
 
-	f, err := os.OpenFile("/dev/uinput", os.O_WRONLY|os.O_NONBLOCK, 0)
+	f, err := os.OpenFile("/dev/uinput", os.O_WRONLY, 0)
 	if err != nil {
 		return nil, fmt.Errorf("open /dev/uinput failed: %w. Ensure 'modprobe uinput' and permissions", err)
 	}
@@ -111,10 +111,7 @@ func (u *UInputBackend) writeEvent(typ, code uint16, val int32) error {
 		Code:  code,
 		Value: val,
 	}
-	// 写结构体
-	buf := (*[unsafe.Sizeof(ev)]byte)(unsafe.Pointer(&ev))[:]
-	_, err := u.fd.Write(buf)
-	return err
+	return binary.Write(u.fd, binary.LittleEndian, &ev)
 }
 
 func (u *UInputBackend) sync() {
