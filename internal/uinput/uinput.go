@@ -305,7 +305,7 @@ func (u *UInputBackend) DelayAutoReleaseWithDuration(resetDuration time.Duration
 	// no-op in uinput
 }
 
-func (u *UInputBackend) GetPath() string { return "" }
+func (u *UInputBackend) GetPath(subpath string) (string, error) { return "", nil }
 
 // 鼠标在 uinput 下暂不实现，保留空实现以兼容编译与调用
 func (u *UInputBackend) AbsMouseReport(x int, y int, buttons uint8) error { return nil }
@@ -317,6 +317,6 @@ func (u *UInputBackend) IsUDCBound() (bool, error) { return false, nil }
 func (u *UInputBackend) BindUDC() error { return nil }
 func (u *UInputBackend) UnbindUDC() error { return nil }
 func (u *UInputBackend) SetGadgetConfig(cfg *usbgadget.Config) error { return nil }
-func (u *UInputBackend) OverrideGadgetConfig(cfg usbgadget.Config) error { return nil }
+func (u *UInputBackend) OverrideGadgetConfig(manufacturer, product, serial string) error { return nil }
 func (u *UInputBackend) UpdateGadgetConfig() error { return nil }
 func (u *UInputBackend) SetGadgetDevices(dev *usbgadget.Devices) error { return nil }
