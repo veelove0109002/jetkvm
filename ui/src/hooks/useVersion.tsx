@@ -29,7 +29,7 @@ export function useVersion() {
     return new Promise<SystemVersionInfo>((resolve, reject) => {
       send("getUpdateStatus", {}, (resp: JsonRpcResponse) => {
         if ("error" in resp) {
-          notifications.error(`Failed to check for updates: ${resp.error}`);
+          notifications.error(`Failed to check for updates: ${resp.error?.data || resp.error?.message || JSON.stringify(resp.error)}`);
           reject(new Error("Failed to check for updates"));
         } else {
           const result = resp.result as SystemVersionInfo;
@@ -37,7 +37,7 @@ export function useVersion() {
           setSystemVersion(result.local.systemVersion);
 
           if (result.error) {
-            notifications.error(`Failed to check for updates: ${result.error}`);
+            notifications.error(`Failed to check for updates: ${typeof result.error === "string" ? result.error : JSON.stringify(result.error)}`);
             reject(new Error("Failed to check for updates"));
           } else {
             resolve(result);
@@ -54,10 +54,10 @@ export function useVersion() {
           console.log(resp.error)
           if (resp.error.code === RpcMethodNotFound) {
             console.warn("Failed to get device version, using legacy version");
-            return getVersionInfo().then(result => resolve(result.local)).catch(reject);
+            return getVersionInfo().then((result: SystemVersionInfo) => resolve(result.local)).catch(reject);
           }
           console.error("Failed to get device version N", resp.error);
-          notifications.error(`Failed to get device version: ${resp.error}`);
+          notifications.error(`Failed to get device version: ${resp.error?.data || resp.error?.message || JSON.stringify(resp.error)}`);
           reject(new Error("Failed to get device version"));
         } else {
           const result = resp.result as VersionInfo;

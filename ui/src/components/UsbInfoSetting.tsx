@@ -11,17 +11,15 @@ import { InputFieldWithLabel } from "./InputField";
 import { SelectMenuBasic } from "./SelectMenuBasic";
 import Fieldset from "./Fieldset";
 
-const generatedSerialNumber = [generateNumber(1, 9), generateHex(7, 7), 0, 1].join("&");
-
-function generateNumber(min: number, max: number) {
-  return Math.floor(Math.random() * (max - min + 1) + min);
+function generateJetSerial() {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let body = "";
+  for (let i = 0; i < 12; i++) {
+    body += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return `JET-${body}`;
 }
-
-function generateHex(min: number, max: number) {
-  const len = generateNumber(min, max);
-  const n = (Math.random() * 0xfffff * 1000000).toString(16);
-  return n.slice(0, len);
-}
+const generatedSerialNumber = generateJetSerial();
 
 export interface USBConfig {
   vendor_id: string;
@@ -63,7 +61,7 @@ export function UsbInfoSetting() {
       "USB Emulation Device": {
         vendor_id: "0x1d6b",
         product_id: "0x0104",
-        serial_number: deviceId,
+        serial_number: deviceId || generatedSerialNumber,
         manufacturer: "JetKVM",
         product: "USB Emulation Device",
       },
@@ -161,7 +159,7 @@ export function UsbInfoSetting() {
           className="max-w-[192px]"
           value={usbConfigProduct}
           fullWidth
-          onChange={e => {
+          onChange={(e: any) => {
             if (e.target.value === "custom") {
               setUsbConfigProduct(e.target.value);
             } else {
@@ -196,13 +194,13 @@ function USBConfigDialog({
   onSetUsbConfig: (usbConfig: USBConfig) => void;
   onRestoreToDefault: () => void;
 }) {
-  const [usbConfigState, setUsbConfigState] = useState<USBConfig>({
+  const [usbConfigState, setUsbConfigState] = useState({
     vendor_id: "",
     product_id: "",
     serial_number: "",
     manufacturer: "",
     product: "",
-  });
+  } as USBConfig);
 
   const { send } = useJsonRpc();
 
@@ -250,7 +248,7 @@ function USBConfigDialog({
           placeholder="Enter Vendor ID"
           pattern="^0[xX][\da-fA-F]{4}$"
           defaultValue={usbConfigState?.vendor_id}
-          onChange={e => handleUsbVendorIdChange(e.target.value)}
+          onChange={(e: any) => handleUsbVendorIdChange(e.target.value)}
         />
         <InputFieldWithLabel
           required
@@ -258,28 +256,28 @@ function USBConfigDialog({
           placeholder="Enter Product ID"
           pattern="^0[xX][\da-fA-F]{4}$"
           defaultValue={usbConfigState?.product_id}
-          onChange={e => handleUsbProductIdChange(e.target.value)}
+          onChange={(e: any) => handleUsbProductIdChange(e.target.value)}
         />
         <InputFieldWithLabel
           required
           label="Serial Number"
           placeholder="Enter Serial Number"
           defaultValue={usbConfigState?.serial_number}
-          onChange={e => handleUsbSerialChange(e.target.value)}
+          onChange={(e: any) => handleUsbSerialChange(e.target.value)}
         />
         <InputFieldWithLabel
           required
           label="Manufacturer"
           placeholder="Enter Manufacturer"
           defaultValue={usbConfigState?.manufacturer}
-          onChange={e => handleUsbManufacturer(e.target.value)}
+          onChange={(e: any) => handleUsbManufacturer(e.target.value)}
         />
         <InputFieldWithLabel
           required
           label="Product Name"
           placeholder="Enter Product Name"
           defaultValue={usbConfigState?.product}
-          onChange={e => handleUsbProduct(e.target.value)}
+          onChange={(e: any) => handleUsbProduct(e.target.value)}
         />
       </div>
       <div className="mt-6 flex gap-x-2">
